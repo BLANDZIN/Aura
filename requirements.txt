@@ -1,0 +1,41 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# AURA v3 — requirements.txt
+# Instalação: pip install -r requirements.txt
+# Python: 3.11+ recomendado
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Interface Gráfica ──────────────────────────────────────────────────────────
+PyQt6>=6.6.0
+
+# ── IA / Comunicação ───────────────────────────────────────────────────────────
+requests>=2.31.0
+
+# ── Automação de Desktop ───────────────────────────────────────────────────────
+pyautogui>=0.9.54
+Pillow>=10.0.0
+pyperclip>=1.8.2
+
+# ── Sistema ────────────────────────────────────────────────────────────────────
+psutil>=5.9.0
+
+# ── Voz TTS (offline) ──────────────────────────────────────────────────────────
+pyttsx3>=2.90
+
+# ── Voz STT (opcional — stt_enabled é False por padrão) ─────────────────────────
+# faster-whisper>=1.0.0     # necessário se você ligar voice.stt_enabled
+
+# ── OCR (opcional — instale Tesseract separado) ────────────────────────────────
+# pytesseract>=0.3.10       # pip install pytesseract
+#                           # + Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
+# easyocr>=1.7.0            # alternativa sem Tesseract (mais pesado)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SETUP DA IA LOCAL (fora do pip)
+# ══════════════════════════════════════════════════════════════════════════════
+# 1. Instale Ollama: https://ollama.com/download
+# 2. AURA (conversa, rápida):
+#      ollama pull qwen2.5:3b     ← rápido, funciona em 4GB RAM
+#      ollama pull qwen2.5:7b     ← melhor qualidade, precisa 8GB RAM
+# 3. Angela (engenharia, precisa mais que rápida):
+#      ollama pull qwen3:4b
+
