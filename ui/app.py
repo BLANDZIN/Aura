@@ -73,6 +73,7 @@ class AuraApp:
 
         # Botão exclusivo "🛠 Angela" (do ChatPanel) publica ui.open_angela
         bus.subscribe("ui.open_angela", self._open_angela_panel)
+        bus.subscribe("ui.open_launcher", self._open_launcher)
 
 
         # ── 5. Exibe avatar ───────────────────────────────────────────────────
@@ -313,6 +314,18 @@ class AuraApp:
 
     # ── Painel da Angela ─────────────────────────────────────────────────────
 
+    def _open_launcher(self, **_):
+        """Abre o Launcher V11 completo como janela separada."""
+        try:
+            from ui.main_window import MainWindow
+            if not hasattr(self, '_launcher_window') or self._launcher_window is None:
+                self._launcher_window = MainWindow()
+            self._launcher_window.show()
+            self._launcher_window.raise_()
+            self._launcher_window.activateWindow()
+        except Exception as e:
+            logger.error("Erro ao abrir Launcher: {}".format(e))
+
     def _open_angela_panel(self, **_) -> None:
         """Abre o painel dedicado da Angela (Chief Engineer)."""
         if self._angela_panel is None:
@@ -356,5 +369,3 @@ class AuraApp:
             db.close()
         except Exception as e:
             logger.warning(f"Erro ao fechar banco de dados: {e}")
-        from database.db_manager import db
-        db.close()

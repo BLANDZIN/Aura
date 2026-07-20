@@ -60,6 +60,10 @@ class OllamaProvider(AIProvider):
         self.model = settings.get(ns, "model", default="qwen2.5:3b")
         self.temperature = settings.get(ns, "temperature", default=0.7)
         self.max_tokens = settings.get(ns, "max_tokens", default=2048)
+        # keep_alive=-1: mantém modelo carregado em RAM permanentemente.
+        # Evita o custo de reload (~3-8s) a cada chamada. Em máquinas
+        # com pouca RAM, configure OLLAMA_KEEP_ALIVE=5m no servidor.
+        self.keep_alive = settings.get(ns, "keep_alive", default=-1)
 
     def is_available(self) -> bool:
         try:
@@ -75,6 +79,7 @@ class OllamaProvider(AIProvider):
             "model": self.model,
             "messages": messages,
             "stream": False,
+            "keep_alive": self.keep_alive,
             "options": {
                 "temperature": self.temperature,
                 "num_predict": self.max_tokens,
@@ -117,6 +122,7 @@ class OllamaProvider(AIProvider):
             "model": self.model,
             "messages": messages,
             "stream": True,
+            "keep_alive": self.keep_alive,
             "options": {
                 "temperature": self.temperature,
                 "num_predict": self.max_tokens,

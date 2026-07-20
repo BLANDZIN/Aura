@@ -82,6 +82,7 @@ class Intent:
             "abrir_site":     f"Abrindo {self.alvo}...",
             "abrir_pasta":    f"Abrindo {self.alvo}...",
             "pesquisar_web":  f"Pesquisando '{self.alvo}'...",
+            "pesquisar_resposta": f"Buscando resposta sobre '{self.alvo}'...",
             "pesquisar_youtube": f"Pesquisando '{self.alvo}' no YouTube...",
             "criar_pasta":    f"Criando pasta '{self.alvo}'...",
             "capturar_tela":  "Tirando screenshot...",
@@ -111,6 +112,8 @@ VERB_MAP: Dict[str, str] = {
     "pesquisa":"pesquisar", "pesquisar":"pesquisar", "pesquise":"pesquisar",
     "busca":"pesquisar", "buscar":"pesquisar", "busque":"pesquisar",
     "procura":"pesquisar", "procurar":"pesquisar", "procure":"pesquisar",
+    "consulta":"pesquisar", "consultar":"pesquisar", "consulte":"pesquisar",
+    "pergunta":"pesquisar", "perguntar":"pesquisar",
     # FECHAR
     "fecha":"fechar", "fechar":"fechar", "feche":"fechar",
     "encerra":"fechar", "encerre":"fechar", "mata":"fechar",

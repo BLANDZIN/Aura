@@ -303,6 +303,22 @@ class ChatPanel(QWidget):
         btn_angela.clicked.connect(lambda: bus.publish("ui.open_angela"))
         row.addWidget(btn_angela)
 
+        # Botao Ferramentas — abre o Launcher V11 completo
+        btn_tools = QPushButton("🔧 Ferramentas")
+        btn_tools.setToolTip("Abrir painel completo do Launcher V11")
+        btn_tools.setFixedHeight(32)
+        btn_tools.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_tools.setStyleSheet("""
+            QPushButton {
+                background: #1A2744; color: #7DD3FC;
+                border: 1px solid #388BFD; border-radius: 8px;
+                padding: 4px 10px; font-size: 12px;
+            }
+            QPushButton:hover { background: #1E3A5F; color: #BAE6FD; }
+        """)
+        btn_tools.clicked.connect(lambda: bus.publish("ui.open_launcher"))
+        row.addWidget(btn_tools)
+
         # Botão fechar
         btn_close = QPushButton("✕")
         btn_close.setFixedSize(32, 32)

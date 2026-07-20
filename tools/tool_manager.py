@@ -39,6 +39,7 @@ from tools.system_tools import (
 from tools.browser_tools import (
     AbrirSiteTool, PesquisarWebTool, PesquisarYoutubeTool, PesquisarSiteTool,
 )
+from tools.search_tools import PesquisarRespostaTool
 from tools.control_tools import (
     CapturarTelaTool, MoverMouseTool, ClicarMouseTool, DigitarTextoTool,
     PressionarTeclaTool, AtalhoTeclaTool, RolarPaginaTool, EsperarTool,
@@ -81,6 +82,8 @@ class ToolManager:
             ObterCPUTool(), ObterRAMTool(), ObterBateriaTool(), ObterMetricasTool(),
             # Navegador
             AbrirSiteTool(), PesquisarWebTool(), PesquisarYoutubeTool(), PesquisarSiteTool(),
+            # Pesquisa inteligente (sem abrir navegador)
+            PesquisarRespostaTool(),
             # Controle
             CapturarTelaTool(), MoverMouseTool(), ClicarMouseTool(),
             DigitarTextoTool(), PressionarTeclaTool(), AtalhoTeclaTool(),
@@ -186,6 +189,7 @@ class ToolManager:
             "Arquivos":      ["criar_pasta","abrir_pasta","abrir_arquivo","renomear_arquivo","copiar_arquivo","mover_arquivo","excluir_arquivo","pesquisar_arquivo"],
             "Sistema":       ["abrir_programa","fechar_programa","obter_cpu","obter_ram","obter_bateria","obter_metricas"],
             "Navegador":     ["abrir_site","pesquisar_web","pesquisar_youtube","pesquisar_site"],
+            "Pesquisa":      ["pesquisar_resposta"],
             "Controle":      ["capturar_tela","mover_mouse","clicar_mouse","digitar_texto","pressionar_tecla","atalho_teclado","rolar_pagina","esperar","copiar_area_transf","escrever_area_transf"],
             "OCR":           ["ler_tela"],
             "Procedimentos": ["salvar_procedimento","executar_procedimento","listar_procedimentos"],
@@ -210,7 +214,7 @@ class ToolManager:
         lines = ["FERRAMENTAS DISPONÍVEIS (use EXATAMENTE esses nomes de ação):"]
         emoji_map = {
             "Arquivos": "📁 Arquivos", "Sistema": "🖥️ Sistema",
-            "Navegador": "🌐 Navegador", "Controle": "⌨️ Controle",
+            "Navegador": "🌐 Navegador", "Pesquisa": "🔍 Pesquisa (texto)", "Controle": "⌨️ Controle",
             "OCR": "👁️ OCR", "Procedimentos": "🔁 Procedimentos",
             "Tarefas": "✅ Tarefas", "Memória": "🧠 Memória",
         }

@@ -27,14 +27,20 @@ class DatabaseManager:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        # Sem isso, qualquer lock externo no arquivo (outra ferramenta
-        # abrindo o .db pra inspecionar, um backup em andamento) falha
-        # imediatamente com "database is locked" em vez de esperar um
-        # pouco e tentar de novo — a conexão em si já é serializada
-        # por _lock, então isso cobre só contenção EXTERNA ao processo.
+        # WAL mode: leitores não bloqueiam escritores. Essencial para
+        # uso concorrente real (chat + monitor + memórias simultâneas).
+        # Sem WAL, um SELECT pode bloquear um INSERT em outra thread.
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        # 5s de timeout para contenção EXTERNA (outra ferramenta
+        # abrindo o .db pra inspecionar, backup em andamento).
         self._conn.execute("PRAGMA busy_timeout = 5000")
+        # synchronous=NORMAL: segurança + performance. FULL seria
+        # mais seguro mas 2-3x mais lento em writes.
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        # Cache de 32MB para queries frequentes
+        self._conn.execute("PRAGMA cache_size = -32768")
         self._init_tables()
-        logger.info(f"Banco de dados iniciado: {db_path}")
+        logger.info(f"Banco de dados iniciado (WAL): {db_path}")
 
     def _init_tables(self) -> None:
         """Cria todas as tabelas necessárias."""
