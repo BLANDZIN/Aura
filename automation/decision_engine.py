@@ -28,6 +28,10 @@ import unicodedata
 from typing import Optional, Dict, Any, List, Tuple
 from core.logger import setup_logger
 from core.event_bus import bus
+
+# NOTA DE ARQUITETURA (V11):
+# O import de ai/intent_engine e feito DENTRO do metodo decide() (lazy import)
+# para evitar ciclo ai -> automation -> ai. Manter assim.
 from core.fuzzy_search import similarity
 
 logger = setup_logger("decision")
@@ -215,10 +219,8 @@ class DecisionEngine:
 
     @staticmethod
     def _normalize(text: str) -> str:
-        n = unicodedata.normalize("NFD", text.lower().strip())
-        n = "".join(c for c in n if unicodedata.category(c) != "Mn")
-        n = re.sub(r"[^\w\s]", " ", n)
-        return re.sub(r"\s+", " ", n).strip()
+        from core.text_utils import normalize
+        return normalize(text)
 
     def decide(
         self,

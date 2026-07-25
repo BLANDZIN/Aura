@@ -34,6 +34,17 @@ STATUS_EM_PROGRESSO = "em_progresso"
 STATUS_CONCLUIDA    = "concluida"
 STATUS_CANCELADA    = "cancelada"
 
+
+# Whitelist de colunas permitidas em SQL dinamico (V11)
+# Previne interpolacao de strings nao validadas
+_TASK_COLUMNS = {"titulo", "descricao", "prioridade", "status", "agendado_em", "repeticao", "atualizado_em", "concluido_em"}
+
+def _validate_column(col: str) -> str:
+    """Valida nome de coluna contra whitelist. Levanta ValueError se invalido."""
+    if col not in _TASK_COLUMNS:
+        raise ValueError(f"Coluna invalida: {col}")
+    return col
+
 PRIORIDADE_ALTA   = 1
 PRIORIDADE_MEDIA  = 2
 PRIORIDADE_BAIXA  = 3
@@ -153,6 +164,11 @@ class TaskManager:
 
         fields.append("atualizado_em = CURRENT_TIMESTAMP")
         values.append(task_id)
+
+        # Valida campos contra whitelist (V11)
+        for f in fields:
+            col_name = f.split(" = ")[0].strip()
+            _validate_column(col_name)
 
         db.execute(
             f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?",

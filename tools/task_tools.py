@@ -43,3 +43,7 @@ class ConcluirTarefaTool(BaseTool):
             return self._success(tid, f"Concluída: '{task['titulo']}'")
         except Exception as e:
             return self._error("Erro ao concluir", e)
+
+
+# Auto-registro V11
+REGISTRY = [CriarTarefaTool(), ListarTarefasTool(), ConcluirTarefaTool()]

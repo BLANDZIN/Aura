@@ -19,15 +19,20 @@ pyperclip>=1.8.2
 psutil>=5.9.0
 
 # ── Voz TTS (offline) ──────────────────────────────────────────────────────────
+# V11: edge-tts é o recomendado (~500KB, vozes neurais PT-BR excelentes)
+edge-tts>=6.1.0
+# pyttsx3 é mantido como fallback (mais pesado, depende de vozes do SO)
 pyttsx3>=2.90
 
 # ── Voz STT (opcional — stt_enabled é False por padrão) ─────────────────────────
+# SpeechRecognition + Google Web Speech = leve, gratuito, ~2MB
+SpeechRecognition>=3.10.0
+# faster-whisper é mantido como opção offline (modelo ~150MB)
 # faster-whisper>=1.0.0     # necessário se você ligar voice.stt_enabled
 
-# ── OCR (opcional — instale Tesseract separado) ────────────────────────────────
-# pytesseract>=0.3.10       # pip install pytesseract
-#                           # + Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
-# easyocr>=1.7.0            # alternativa sem Tesseract (mais pesado)
+# ── OCR (opcional — um dos dois abaixo) ────────────────────────────────────────
+# easyocr>=1.7.0            # recomendado (zero config, cross-platform, ~90MB)
+# pytesseract>=0.3.10       # alternativo (mais rápido, precisa Tesseract instalado)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SETUP DA IA LOCAL (fora do pip)

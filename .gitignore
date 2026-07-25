@@ -6,3 +6,22 @@ database/*.db
 angela/workspace/
 .pytest_cache/
 *.egg-info/
+
+# V11 — diretórios de dados (não commitar conteúdo, só estrutura)
+cache/
+workspace/
+profiles/.active
+
+# Modelos (GGUF são grandes demais pra git)
+models/*.gguf
+models/*/
+
+# Vozes offline
+voices/*.wav
+voices/*.mp3
+
+# Build artifacts
+dist/
+*.spec
+build/aura_linux/
+build/build/

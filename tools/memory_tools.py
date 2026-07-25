@@ -32,3 +32,7 @@ class BuscarMemoriaTool(BaseTool):
             return self._success(r, f"Memória: {r}" if r else "Não encontrado")
         except Exception as e:
             return self._error("Erro ao buscar", e)
+
+
+# Auto-registro V11
+REGISTRY = [SalvarMemoriaTool(), BuscarMemoriaTool()]

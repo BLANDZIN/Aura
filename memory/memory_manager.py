@@ -632,3 +632,21 @@ class MemoryManager:
 
 # Instância global — compatível com todo o código existente
 memory = MemoryManager()
+
+
+if __name__ == "__main__":
+    """Smoke test rapido — classifica textos e mostra estatisticas."""
+    tests = [
+        "meu nome e Bland",
+        "quero passar na EsPCEx",
+        "gosto de jogar xadrez",
+        "abri o Chrome",
+        "texto qualquer",
+    ]
+    for t in tests:
+        score = classify_importance(t)
+        print(f"  [{score}] {t}")
+    print()
+    stats = memory.memory_stats()
+    print(f"  Memorias: {stats['permanent']['total_memories']}")
+    print(f"  Alta importancia: {stats['permanent']['high_importance']}")

@@ -66,3 +66,7 @@ class ListarProcedimentosTool(BaseTool):
             return self._success(procs, "\n".join(items))
         except Exception as e:
             return self._error("Erro ao listar procedimentos", e)
+
+
+# Auto-registro V11
+REGISTRY = [SalvarProcedimentoTool(), ExecutarProcedimentoTool(), ListarProcedimentosTool()]

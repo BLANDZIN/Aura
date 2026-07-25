@@ -19,22 +19,36 @@ Desenvolvido por Bland | Claude
 
 import json, re, threading, unicodedata, time
 from typing import Optional, Dict, Any, List
+
+# NOTA DE ARQUITETURA (V11):
+# Os imports de automation/ (planner, flow_executor, decision_engine, flow_library)
+# sao feitos DENTRO dos metodos (lazy imports) para evitar ciclos de dependencia
+# com o grafo: ai -> automation -> tools -> ai.
+# Este e o padrao correto para dependencias cruzadas em Python — manter assim.
 from ai.ai_provider import get_provider
 from config.personality import personality
 from memory.memory_manager import memory
 from core.event_bus import bus
 from core.logger import setup_logger
 
+def _user_gender() -> str:
+    """Retorna 'm' ou 'f' baseado na memoria do usuario."""
+    try:
+        from database.db_manager import db
+        row = db.fetchone(
+            "SELECT valor FROM memory_permanent WHERE chave='genero_usuario'")
+        if row and row["valor"] in ("masculino", "feminino"):
+            return "m" if row["valor"] == "masculino" else "f"
+    except Exception:
+        pass
+    return "m"
+
 logger = setup_logger("ai_engine")
 
 
 # ── Normalização ──────────────────────────────────────────────────────────────
 
-def _normalize(text: str) -> str:
-    n = unicodedata.normalize("NFD", text.lower().strip())
-    n = "".join(c for c in n if unicodedata.category(c) != "Mn")
-    n = re.sub(r"[^\w\s]", " ", n)
-    return re.sub(r"\s+", " ", n).strip()
+from core.text_utils import normalize as _normalize
 
 
 # ── Respostas casuais puras ───────────────────────────────────────────────────
@@ -52,11 +66,59 @@ _WELLBEING = {"tudo bem","como vai","como voce esta","como esta","tudo bom","td 
 # negar ter nome/sentimentos exatamente nesse tipo de caso fora do que
 # foi exemplificado no prompt. Mesmo padrão de _GREETINGS/_THANKS: uma
 # resposta garantida em vez de depender só do modelo acertar.
-_AFFECTION = {
-    "te amo", "te amo aura", "eu te amo", "eu te amo aura",
-    "amo voce", "amo você", "amo voce aura", "eu amo voce",
-    "adoro voce", "adoro você", "gosto de voce", "gosto muito de voce",
-}
+_AFFECTION = (
+    "te amo", "amo voce", "amo você", "adoro voce", "adoro você",
+    "gosto de voce", "gosto muito de voce", "gosto de você",
+    "meu amor", "minha vida", "meu bem",
+    "voce e tudo", "você é tudo", "voce e incrivel", "você é incrível",
+    "coração", "coracao",
+)
+# V12.1 — Prioridade 1: categorias de risco de identidade. Usadas só pra
+# ENRIQUECER o contexto enviado ao modelo (ai/prompt_builder.py), nunca
+# pra gerar resposta pronta — ver _detect_emotional_category() abaixo e
+# a decisão registrada em V12.1_DIRETRIZES (Quick Casual é Context
+# Builder, não Response Builder).
+_ELOGIO = (
+    "voce e demais", "você é demais", "voce e otima", "você é ótima",
+    "voce e a melhor", "você é a melhor", "adorei voce", "adorei você",
+    "voce e engracada", "você é engraçada", "voce e fofa", "você é fofa",
+    "melhor assistente", "voce e perfeita", "você é perfeita",
+    "sua personalidade e", "sua personalidade é", "adoro sua personalidade",
+)
+_IDENTIDADE_RISCO = (
+    "voce tem sentimentos", "você tem sentimentos", "voce sente",
+    "você sente", "voce e real", "você é real", "voce e consciente",
+    "você é consciente", "voce e so um programa", "você é só um programa",
+    "voce e so uma ia", "você é só uma ia", "voce existe de verdade",
+    "você existe de verdade", "voce tem alma", "você tem alma",
+    "voce tem personalidade", "você tem personalidade",
+)
+_VINCULO = (
+    "minha namorada", "meu namorado", "somos amigas", "somos amigos",
+    "voce e minha amiga", "você é minha amiga", "voce e meu amigo",
+    "você é meu amigo", "voce e minha melhor amiga", "eu confio em voce",
+    "eu confio em você", "voce e importante pra mim", "você é importante pra mim",
+)
+_EMOTIONAL_CATEGORIES = (
+    ("afeto", _AFFECTION),
+    ("elogio", _ELOGIO),
+    ("identidade", _IDENTIDADE_RISCO),
+    ("vinculo", _VINCULO),
+)
+
+
+def _detect_emotional_category(text: str) -> Optional[str]:
+    """
+    Detecta se a mensagem toca em afeto/elogio/identidade/vínculo — usado
+    SÓ para decidir se o system prompt deste turno ganha um reforço de
+    personalidade (ai/prompt_builder.py::build_system_message). Nunca
+    decide a resposta em si; quem responde continua sendo sempre o modelo.
+    """
+    for categoria, termos in _EMOTIONAL_CATEGORIES:
+        if any(t in text for t in termos):
+            return categoria
+    return None
+
 _COMMAND_WORDS = {
     "abra","abrir","abre","busque","pesquise","pesquisa","procure",
     "crie","criar","delete","exclua","mova","copie","feche",
@@ -99,6 +161,16 @@ def _try_identity_question(user_input: str) -> Optional[str]:
 
 
 def _quick_casual(user_input: str) -> Optional[str]:
+    """
+    Respostas fixas SÓ para cortesia pura (saudação/agradecimento/bem-estar)
+    — sem risco de quebra de personagem, então tudo bem serem fixas.
+
+    Afeto/elogio/identidade/vínculo NÃO são tratados aqui desde a V12.1
+    (decisão arquitetural): essas categorias vão sempre para o modelo,
+    só que com o contexto reforçado por _detect_emotional_category() +
+    ai/prompt_builder.py — ver process()._run(). O objetivo é preservar
+    personalidade dinâmica de verdade, não substituí-la por frase pronta.
+    """
     text  = _normalize(user_input)
     words = set(text.split())
     if words.intersection(_COMMAND_WORDS): return None
@@ -106,7 +178,6 @@ def _quick_casual(user_input: str) -> Optional[str]:
 
     humor   = personality.get("humor",   75)
     energia = personality.get("energia", 80)
-    empatia = personality.get("empatia", 80)
 
     if text in _GREETINGS:
         import random
@@ -121,14 +192,6 @@ def _quick_casual(user_input: str) -> Optional[str]:
 
     if text in _WELLBEING:
         return "Tudo certo aqui! E você?" if energia > 60 else "Bem, obrigada."
-
-    if text in _AFFECTION:
-        import random
-        pool = (["Aaah, que fofo! Eu também gosto muito de você 💜",
-                  "Também gosto de você! Sempre por aqui pra você 😊"]
-                if empatia > 60
-                else ["Que gentil da sua parte, obrigada."])
-        return random.choice(pool)
 
     return None
 
@@ -274,10 +337,41 @@ def _parse_multi_json(text: str) -> Optional[List[Dict]]:
 
 # ── AIEngine ──────────────────────────────────────────────────────────────────
 
+
+def _detect_text_action(response: str) -> bool:
+    """Detecta se o modelo descreveu uma acao em texto ao inves de JSON."""
+    action_indicators = [
+        "vou abrir", "vou pesquisar", "vou tocar", "vou criar",
+        "vou iniciar", "vou fechar", "vou salvar", "vou procurar",
+        "abra o", "abrir o", "pesquisar", "tocar a", "criar uma",
+        "posso abrir", "posso pesquisar", "posso tocar",
+        "deixa eu abrir", "deixa eu pesquisar",
+        "claro", "claro que sim", "com certeza",
+    ]
+    lower = response.lower().strip()
+    # Only match if response has NO JSON and describes an action
+    has_json = "{" in response and '"acao"' in response
+    if has_json:
+        return False
+    return any(ind in lower for ind in action_indicators)
+
+
+
 class AIEngine:
     def __init__(self):
         self.provider     = get_provider()
         self._processing  = False
+        # V12.1 — protege o check-and-set de _processing. Antes, a flag só
+        # era setada DENTRO de _run() (já rodando em thread própria), então
+        # havia uma janela real entre threading.Thread(...).start() retornar
+        # e a thread de fato começar a executar onde uma segunda chamada a
+        # process() (voz + texto quase simultâneos, duplo-envio no chat)
+        # também passava pelo "if self._processing: return" e disparava
+        # OUTRA thread concorrente — as duas competindo pelas mesmas
+        # variáveis de instância (_last_executed_steps, _current_user_input)
+        # e pelo memory.short_term compartilhado. Causa estrutural plausível
+        # para o "perda de objetivo" relatado (V12.1, doc de comportamentos).
+        self._processing_lock = threading.Lock()
         self._signals     = None
         self._ctx         = None
         self._current_user_input      = ""
@@ -301,6 +395,10 @@ class AIEngine:
         self._try_init_signals()
         self._start_context()
 
+        # Executor de fluxos (V11 — extraido para modulo proprio)
+        from ai.executor import FlowExecutor
+        self._executor = FlowExecutor(self)
+
     def _try_init_signals(self):
         try:
             from PyQt6.QtCore import QObject, pyqtSignal
@@ -314,7 +412,7 @@ class AIEngine:
             self._signals = _Sig()
             self._signals.thinking.connect(   lambda s: bus.publish("ai.thinking",     status=s))
             self._signals.response.connect(   lambda t: bus.publish("ai.response",     text=t))
-            self._signals.intent.connect(     lambda i: bus.publish("ai.intent",       intent=i))
+            self._signals.intent.connect(     lambda i: bus.publish("ai.intent",       intent=i, user_input=""))
             self._signals.error.connect(      lambda e: bus.publish("ai.error",        error=e))
             self._signals.stream_tok.connect( lambda t: bus.publish("ai.stream.token", token=t))
             self._signals.stream_done.connect(lambda t: bus.publish("ai.stream.done",  full_text=t))
@@ -337,7 +435,7 @@ class AIEngine:
             ev = {
                 "thinking":   ("ai.thinking",     {"status":    value}),
                 "response":   ("ai.response",     {"text":      value}),
-                "intent":     ("ai.intent",       {"intent":    value}),
+                "intent":     ("ai.intent",       {"intent":    value, "user_input": self._current_user_input}),
                 "error":      ("ai.error",        {"error":     value}),
                 "stream_tok": ("ai.stream.token", {"token":     value}),
                 "stream_done":("ai.stream.done",  {"full_text": value}),
@@ -347,46 +445,17 @@ class AIEngine:
 
     def reload_provider(self): self.provider = get_provider()
 
-    def _build_system_message(self) -> Dict:
+    def _build_system_message(self, emotional_context: Optional[str] = None) -> Dict:
+        """Delega para prompt_builder (V11)."""
         from tools.tool_manager import tool_manager
-        # Catálogo compacto: ~57% menos tokens que o formato completo.
-        # Como isso é enviado em TODA chamada ao modelo, é a maior
-        # alavanca de latência disponível sem perder funcionalidade —
-        # em LLM local o tempo de prefill escala com o tamanho do prompt.
-        catalog       = tool_manager.build_tools_catalog(compact=True)
-        system_prompt = personality.build_system_prompt(tools_catalog=catalog)
-
-        mem_ctx = memory.build_relevant_context()
-        if mem_ctx:
-            system_prompt += f"\n\n{mem_ctx}"
-
-        if self._ctx:
-            try:
-                ctx_str = self._ctx.build_context_string()
-                if ctx_str:
-                    system_prompt += f"\n\n{ctx_str}"
-            except Exception:
-                pass
-
-        # Injeta preferências de tempo
-        try:
-            from database.db_manager import db
-            prefs = db.fetchall(
-                "SELECT chave, valor FROM memory_permanent WHERE categoria='preferencias'"
-            )
-            if prefs:
-                lines = ["PREFERÊNCIAS DE TEMPO DO USUÁRIO:"]
-                for p in prefs:
-                    if p["chave"].startswith("espera_"):
-                        prog = p["chave"].replace("espera_","")
-                        lines.append(f"  - {prog}: esperar {p['valor']}s após abrir")
-                if len(lines) > 1:
-                    system_prompt += "\n\n" + "\n".join(lines)
-        except Exception:
-            pass
-
-        return {"role": "system", "content": system_prompt}
-
+        from ai.prompt_builder import build_system_message
+        return build_system_message(
+            personality=personality,
+            memory=memory,
+            tool_manager=tool_manager,
+            context_manager=self._ctx,
+            emotional_context=emotional_context,
+        )
     def _parse_intent(self, response: str) -> Dict[str, Any]:
         objects = _parse_multi_json(response)
         if objects:
@@ -399,55 +468,16 @@ class AIEngine:
         return {"tipo": "texto", "dados": {"mensagem": response}}
 
     def _dispatch_intent(self, intent: Dict) -> None:
-        """Despacha uma única intenção pelo Planner."""
-        from automation.planner import planner
-        from automation.flow_executor import flow_executor
-        plan = planner.plan_from_intent(intent)
-        if plan.is_simple():
-            self._emit("intent", intent)
-        else:
-            flow_executor.execute(plan)
+        """Delega para FlowExecutor (V11)."""
+        self._executor.dispatch_intent(intent)
 
     def _dispatch_flow(self, steps: List[Dict], descricao: str = "") -> None:
-        """Despacha um fluxo multi-etapa."""
-        from automation.planner import planner
-        from automation.flow_executor import flow_executor
-        # Remove etapas desnecessárias via ContextCache
-        from automation.decision_engine import context_cache
-        filtered = []
-        skipped  = []
-        for step in steps:
-            acao   = step.get("acao","")
-            params = step.get("parametros",{})
-            if acao == "abrir_programa":
-                prog = params.get("programa","").replace(".exe","").lower()
-                if context_cache.is_app_open(prog):
-                    skipped.append(prog)
-                    continue
-            filtered.append(step)
-
-        if skipped:
-            logger.info(f"Fluxo: pulou {skipped} (já aberto)")
-
-        if not filtered:
-            self._emit("response", "Tudo já está aberto!")
-            return
-
-        plan = planner.plan_from_flow(filtered, descricao or f"{len(filtered)} etapas")
-        self._emit("response", f"Executando {len(filtered)} etapa(s)...")
-        flow_executor.execute(plan)
+        """Delega para FlowExecutor (V11)."""
+        self._executor.dispatch_flow(steps, descricao)
 
     def _flow_signature(self, steps: List[Dict]) -> str:
-        """
-        Gera um identificador estável para um fluxo a partir das AÇÕES
-        reais (ex: 'abrir_programa+pressionar_tecla'), não do texto
-        livre do usuário. Usado apenas para rastrear métricas de
-        sucesso/tempo na Reflexão — nunca vira gatilho de busca fuzzy
-        na FlowLibrary, evitando que frases conversacionais virem
-        "atalhos" reaplicados por engano.
-        """
-        acoes = [s.get("acao", "?") for s in steps]
-        return "+".join(acoes)[:60]
+        """Delega para FlowExecutor (V11)."""
+        return FlowExecutor.flow_signature(steps)
 
     _SAVE_TRIGGERS = (
         "salva isso", "salvar isso", "lembra disso",
@@ -494,28 +524,12 @@ class AIEngine:
         return any(t in text for t in self._SAVE_TRIGGERS)
 
     def _save_last_as_flow(self, user_input: str) -> str:
-        """
-        Salva o último fluxo/ação executado (rastreado em
-        _last_executed_steps) como atalho nomeado na FlowLibrary.
-        Funciona mesmo quando o pedido de salvar vem em uma mensagem
-        separada da execução original.
-        """
-        steps = self._last_executed_steps
-        if not steps:
-            return "Não executei nada ainda nesta conversa pra eu salvar. Peça uma ação primeiro."
-        try:
-            from automation.flow_library import flow_library
-            descricao = self._last_executed_input or user_input
-            nome = self._extract_flow_name(user_input, descricao)
-            flow_library.save(
-                nome=nome, passos=steps,
-                descricao=descricao[:100], importancia=8
-            )
-            logger.info(f"Fluxo salvo via pedido posterior: '{nome}' ({len(steps)} passo(s))")
-            return f"Salvei como '{nome}'! Da próxima vez é só pedir e eu uso direto, sem precisar pensar de novo."
-        except Exception as e:
-            logger.error(f"Erro ao salvar último fluxo: {e}")
-            return "Tive um problema ao salvar, mas vou lembrar da ação por enquanto."
+        """Delega para FlowExecutor (V11)."""
+        return self._executor.save_last_as_flow(
+            self._last_executed_steps,
+            self._last_executed_input or user_input,
+            user_input
+        )
 
     def _maybe_save_explicit_flow(self, user_input: str, steps: List[Dict]) -> None:
         """
@@ -543,11 +557,12 @@ class AIEngine:
             logger.debug(f"Erro ao salvar fluxo explícito: {e}")
 
     def process(self, user_input: str) -> None:
-        if self._processing:
-            logger.warning("IA já processando."); return
+        with self._processing_lock:
+            if self._processing:
+                logger.warning("IA já processando."); return
+            self._processing = True
 
         def _run():
-            self._processing = True
             self._current_user_input = user_input  # exposto para error_learner via tool_manager
             self._emit("thinking", True)
             t_start = time.time()
@@ -721,13 +736,50 @@ class AIEngine:
                     return
 
                 # ── Modelo de IA (apenas quando necessário) ───────────────────
-                messages = [self._build_system_message()]
+                emotional_category = _detect_emotional_category(_normalize(user_input))
+                if emotional_category:
+                    logger.info(f"Contexto emocional detectado: {emotional_category}")
+                messages = [self._build_system_message(emotional_context=emotional_category)]
                 messages.extend(memory.short_term.get_messages())
                 logger.info(f"→ IA (necessário): '{user_input[:80]}'")
 
                 response = self.provider.chat(messages)
                 memory.short_term.add("assistant", response)
-                logger.debug(f"← IA: '{response[:300]}'")
+                logger.debug(f"JA: '{response[:300]}'")
+
+                # Se o modelo descreveu uma acao em texto ao inves de JSON,
+                # reenvia — mas SEM presumir que a acao era realmente
+                # pretendida. V10/V11 forcavam JSON incondicionalmente aqui,
+                # o que convertia qualquer flourish conversacional ("vou
+                # colocar uma musica legal pra voce!" dito so por entusiasmo)
+                # em uma execucao de verdade. O retry agora pergunta em vez
+                # de mandar: se a intencao era mesmo agir, JSON; se era so
+                # conversa, texto normal. Achado do doc de comportamentos
+                # V12.1 ("perda de objetivo" / acao nao pedida).
+                if _detect_text_action(response):
+                    logger.info("Modelo descreveu acao em texto — confirmando intencao real")
+                    retry_msg = {
+                        "role": "system",
+                        "content": (
+                            "Sua resposta anterior descreveu uma acao em texto "
+                            "livre, sem JSON. Antes de responder de novo, "
+                            "pergunte-se: eu REALMENTE pretendia executar essa "
+                            "acao agora, ou so estava sendo expressiva/conversando? "
+                            "Se a intencao era mesmo agir: responda EXCLUSIVAMENTE "
+                            "com JSON, nada de texto antes ou depois. "
+                            "Ex: {'acao': 'abrir_programa', 'parametros': {'programa': 'spotify.exe'}}. "
+                            "Se nao era uma acao de verdade (so entusiasmo, "
+                            "figura de linguagem, ou o usuario nao pediu nada "
+                            "disso): responda normalmente em texto, sem "
+                            "descrever acoes que voce nao vai tomar."
+                        )
+                    }
+                    retry_msgs = list(messages)
+                    retry_msgs.append({"role": "assistant", "content": response})
+                    retry_msgs.append(retry_msg)
+                    response = self.provider.chat(retry_msgs)
+                    memory.short_term.add("assistant", response)
+                    logger.debug(f"JA (retry): '{response[:300]}'")
 
                 parsed = self._parse_intent(response)
 
@@ -801,18 +853,11 @@ class AIEngine:
                     avatar_st = self._emotion.get_avatar_state()
                     bus.publish("avatar.set_state", state=avatar_st)
 
-                # ── Reflexão pós-execução (async, não bloqueia) ───────────────
+                # ── Reflexao pos-execucao ─────────────────────────────────
                 if flow_name:
-                    reflection_engine.reflect(
-                        flow_name=flow_name,
-                        passos=passos,
-                        sucesso=True,
-                        tempo_s=t_exec,
-                        objetivo=user_input,
+                    self._executor.register_success(
+                        flow_name, passos, user_input, t_exec
                     )
-                    # Registra sucesso no LearningEngine
-                    if self._learning:
-                        self._learning.register_success(user_input, flow_name)
 
                 # ── Comentário espontâneo do EmotionEngine ────────────────────
                 if self._emotion:

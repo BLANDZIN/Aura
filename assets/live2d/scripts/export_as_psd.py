@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+import logging
+logger = logging.getLogger(__name__)
+
 export_as_psd.py — Exporta AURA como PSD para Live2D Cubism
 =============================================================
 Gera um unico arquivo AURA.psd com todas as camadas
@@ -28,7 +31,7 @@ EXPORT_DIR = OUTPUT_DIR / "export"
 
 def log(msg, level="INFO"):
     icons = {"INFO": "->", "OK": "OK", "WARN": "!!", "ERR": "XX", "STEP": ">>"}
-    print(f"  {icons.get(level, '.')} {msg}")
+    logger.info(f"{icons.get(level, '.')} {msg}")
 
 
 # ── Definicao das camadas em ordem de renderizacao ────────────────────────────
@@ -123,8 +126,8 @@ def build_psd(canvas_size: int, output_path: Path) -> dict:
         from psd_tools import PSDImage
     except ImportError:
         print()
-        print("  ERRO: psd-tools nao instalado.")
-        print("  Execute: pip install psd-tools")
+        logger.error("psd-tools nao instalado.")
+        logger.error("Execute: pip install psd-tools")
         print()
         sys.exit(1)
 

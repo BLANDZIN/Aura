@@ -40,3 +40,32 @@ def test_db_manager_has_busy_timeout_configured():
     from database.db_manager import db
     row = db._conn.execute("PRAGMA busy_timeout").fetchone()
     assert row[0] >= 5000
+
+
+def test_db_manager_has_wal_mode():
+    from database.db_manager import db
+    row = db._conn.execute("PRAGMA journal_mode").fetchone()
+    assert row[0].lower() == "wal"
+
+
+def test_db_manager_has_indices_for_frequent_queries(tmp_path):
+    # V12.1 Prioridade 9 — índices pras consultas reais mais usadas
+    # (tasks por status/prioridade, memory_permanent por categoria/
+    # importância, flow_library por prioridade/taxa_sucesso,
+    # execution_log por flow_nome). Testado num DB novo, não no global,
+    # pra não depender de estado deixado por outros testes.
+    from database.db_manager import DatabaseManager
+    db = DatabaseManager(db_path=str(tmp_path / "idx_test.db"))
+    indices = {
+        r["name"] for r in db.fetchall(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'"
+        )
+    }
+    esperados = {
+        "idx_tasks_status_prioridade", "idx_tasks_agendado_em",
+        "idx_memory_permanent_categoria", "idx_memory_permanent_importance",
+        "idx_flow_library_prioridade", "idx_flow_library_taxa_sucesso",
+        "idx_execution_log_flow_nome",
+    }
+    assert esperados <= indices
+    db.close()

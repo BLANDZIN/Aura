@@ -42,6 +42,7 @@ class AuraApp:
         self._angela = None            # angela.Angela — Chief Engineer
         self._angela_panel = None      # ui.angela_panel.AngelaPanel (lazy)
         self._initialized = False
+        self._pending_timers: list = []  # V11: rastreia timers para cancelar no shutdown
 
 
     def start(self) -> None:
@@ -73,6 +74,7 @@ class AuraApp:
 
         # Botão exclusivo "🛠 Angela" (do ChatPanel) publica ui.open_angela
         bus.subscribe("ui.open_angela", self._open_angela_panel)
+        bus.subscribe("ui.open_launcher", self._open_launcher)
 
 
         # ── 5. Exibe avatar ───────────────────────────────────────────────────
@@ -105,6 +107,15 @@ class AuraApp:
             bus.subscribe("flow.done",               self._on_flow_done)
             bus.subscribe("flow.aborted",            self._on_flow_aborted)
             bus.subscribe("automation.suggestion",   self._on_automation_suggestion)
+            # V12.1 — achado da auditoria do EventBus: _on_voice_listening
+            # e _on_voice_speaking já existiam prontos (dão feedback visual
+            # no avatar durante uso de voz) mas nunca eram assinados —
+            # "voice.listening"/"voice.speaking_start" eram publicados por
+            # voice_manager.py/voice_engine.py sem nenhum lado ouvindo.
+            bus.subscribe("voice.listening",      self._on_voice_listening)
+            bus.subscribe("voice.speaking_start", self._on_voice_speaking)
+            bus.subscribe("voice.speaking_end",   self._on_voice_speaking_end)
+            bus.subscribe("voice.error",          self._on_voice_error)
             bus.subscribe("tasks.created",   lambda **kw: self._refresh_panel_data())
             bus.subscribe("tasks.completed", lambda **kw: self._refresh_panel_data())
             bus.subscribe("tasks.updated",   lambda **kw: self._refresh_panel_data())
@@ -305,6 +316,13 @@ class AuraApp:
     def _on_voice_speaking(self, text: str = "") -> None:
         self._avatar.set_state("speaking")
 
+    def _on_voice_speaking_end(self, **_) -> None:
+        self._avatar.set_state("idle")
+
+    def _on_voice_error(self, mensagem: str = "") -> None:
+        logger.warning(f"Erro de voz: {mensagem}")
+        self._avatar.set_state("idle")
+
     def _on_task_due(self, task_id: int, titulo: str, mensagem: str) -> None:
         """Tarefa agendada disparou — notifica via chat e avatar."""
         bus.publish("ai.response", text=mensagem)
@@ -312,6 +330,18 @@ class AuraApp:
         QTimer.singleShot(4000, lambda: self._avatar.set_state("idle"))
 
     # ── Painel da Angela ─────────────────────────────────────────────────────
+
+    def _open_launcher(self, **_):
+        """Abre o Launcher V11 completo como janela separada."""
+        try:
+            from ui.main_window import MainWindow
+            if not hasattr(self, '_launcher_window') or self._launcher_window is None:
+                self._launcher_window = MainWindow()
+            self._launcher_window.show()
+            self._launcher_window.raise_()
+            self._launcher_window.activateWindow()
+        except Exception as e:
+            logger.error("Erro ao abrir Launcher: {}".format(e))
 
     def _open_angela_panel(self, **_) -> None:
         """Abre o painel dedicado da Angela (Chief Engineer)."""
@@ -337,6 +367,14 @@ class AuraApp:
     def shutdown(self) -> None:
         """Encerramento limpo — chamado pelo QApplication.aboutToQuit."""
         logger.info("Encerrando AURA...")
+        # Cancela timers pendentes (V11)
+        for t in self._pending_timers:
+            try:
+                if hasattr(t, 'stop') and t.isActive():
+                    t.stop()
+            except Exception:
+                pass
+        self._pending_timers.clear()
         if self._angela is not None:
             try:
                 self._angela.shutdown()
@@ -344,8 +382,17 @@ class AuraApp:
                 logger.warning(f"Erro ao encerrar Angela: {e}")
         if hasattr(self, '_task_manager'):
             self._task_manager.shutdown()
-        if hasattr(self, '_voice'):
-            self._voice.stop()
+        # V12.1 — achado da auditoria do EventBus: self._voice nunca era
+        # setado (voice_manager.start() é chamado direto por
+        # ui/chat_page.py e ui/chat_panel.py, não por AuraApp), então
+        # esse hasattr sempre dava False e a thread de TTS nunca era
+        # parada explicitamente ao fechar. Para o singleton real,
+        # independente de qual painel o iniciou.
+        try:
+            from voice.voice_manager import voice_manager
+            voice_manager.stop()
+        except Exception as e:
+            logger.debug(f"Encerramento de voz (não crítico): {e}")
 
         bus.clear()
         if self._avatar:
@@ -356,5 +403,3 @@ class AuraApp:
             db.close()
         except Exception as e:
             logger.warning(f"Erro ao fechar banco de dados: {e}")
-        from database.db_manager import db
-        db.close()

@@ -12,6 +12,41 @@ from core.logger import setup_logger
 logger = setup_logger("tools")
 
 
+
+from dataclasses import dataclass, field
+from typing import Any, Optional
+import time
+
+
+@dataclass
+class ToolResult:
+    """Resultado padronizado de toda ferramenta AURA (V11).
+    
+    Todas as 38 ferramentas usam este formato via _success()/_error().
+    """
+    success: bool
+    message: str = ""
+    data: Any = None
+    metadata: dict = field(default_factory=dict)
+    execution_time_ms: float = 0.0
+
+    @classmethod
+    def ok(cls, data=None, message="Concluido.", **metadata):
+        return cls(success=True, data=data, message=message, metadata=metadata)
+
+    @classmethod
+    def fail(cls, message="Erro.", data=None, **metadata):
+        return cls(success=False, data=data, message=message, metadata=metadata)
+
+    def to_dict(self):
+        return {
+            "sucesso": self.success,
+            "mensagem": self.message,
+            "resultado": self.data,
+        }
+
+
+
 class BaseTool(ABC):
     name: str = ""
     description: str = ""
@@ -20,11 +55,12 @@ class BaseTool(ABC):
     @abstractmethod
     def execute(self, parametros: Dict[str, Any]) -> Dict[str, Any]: ...
 
-    def _success(self, resultado=None, mensagem: str = "Concluído.") -> Dict:
+    def _success(self, resultado=None, mensagem: str = "Concluido.") -> Dict:
         return {"sucesso": True, "resultado": resultado, "mensagem": mensagem}
 
     def _error(self, mensagem: str, erro=None) -> Dict:
-        logger.error(f"[{self.name}] {mensagem}: {erro}")
+        if erro:
+            logger.error(f"[{self.name}] {mensagem}: {erro}")
         return {"sucesso": False, "resultado": None, "mensagem": mensagem}
 
     def _pyautogui_error(self, mensagem_padrao: str, erro: Exception) -> Dict:

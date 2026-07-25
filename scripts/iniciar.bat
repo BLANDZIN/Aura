@@ -1,8 +1,10 @@
 @echo off
-title AURA v3
+chcp 65001 >nul
+title AURA V12
+cd /d "%~dp0.."
 echo.
 echo  ╔══════════════════════════════════════╗
-echo  ║         AURA v3 - Iniciando         ║
+echo  ║         AURA V12 - Iniciando          ║
 echo  ╚══════════════════════════════════════╝
 echo.
 
@@ -15,14 +17,16 @@ if errorlevel 1 (
 python -c "import PyQt6" >nul 2>&1
 if errorlevel 1 (
     echo  [INFO] Instalando dependencias...
-    call instalar.bat
+    call "%~dp0instalar.bat"
 )
 
-echo  Iniciando AURA v3...
-python main.py
+ollama list >nul 2>&1 || (echo  [INFO] Iniciando Ollama... && start "" /B ollama serve && timeout /t 3 /nobreak >nul)
+
+echo  Iniciando AURA V12...
+python AURA.py
 
 if errorlevel 1 (
     echo.
-    echo  [ERRO] AURA encerrou com erro. Veja os logs acima.
+    echo  [ERRO] AURA encerrou com erro. Verifique: pip install -r requirements.txt
     pause
 )

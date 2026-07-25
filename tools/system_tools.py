@@ -72,3 +72,7 @@ class ObterMetricasTool(BaseTool):
         if not summary:
             return self._success({}, "Nenhuma métrica coletada ainda nesta sessão")
         return self._success(summary, metrics.to_markdown())
+
+
+# Auto-registro V11
+REGISTRY = [AbrirProgramaTool(), FecharProgramaTool(), ObterCPUTool(), ObterRAMTool(), ObterBateriaTool(), ObterMetricasTool()]

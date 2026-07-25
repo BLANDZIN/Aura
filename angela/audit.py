@@ -66,9 +66,17 @@ class Auditor:
         root = Path(self._p.workspace_root())
         out: List[Path] = []
         skip_dirs = {"__pycache__", ".git", ".pytest_cache"}
+        # Pastas de saída geradas por build.py (PyInstaller) — mesmo
+        # problema que angela/workspace já tinha: cópias/artefatos
+        # derivados do código-fonte real inflam toda métrica se entrarem
+        # na varredura (achado rodando esta própria auditoria contra a
+        # V12 logo após um build local).
+        generated_top_dirs = {"build", "dist"}
         for p in root.rglob("*.py"):
             rel_parts = p.relative_to(root).parts
             if skip_dirs & set(rel_parts):
+                continue
+            if rel_parts and rel_parts[0] in generated_top_dirs:
                 continue
             # angela/workspace é um SNAPSHOT do próprio projeto (sandbox
             # de trabalho da Angela) — escaneá-lo junto da raiz duplica

@@ -114,3 +114,7 @@ class PesquisarArquivoTool(BaseTool):
             return self._success(c, f"{len(c)} item(s) encontrado(s)")
         except Exception as e:
             return self._error("Erro na pesquisa", e)
+
+
+# Auto-registro V11
+REGISTRY = [CriarPastaTool(), AbrirPastaTool(), AbrirArquivoTool(), RenomearArquivoTool(), CopiarArquivoTool(), MoverArquivoTool(), ExcluirArquivoTool(), PesquisarArquivoTool()]

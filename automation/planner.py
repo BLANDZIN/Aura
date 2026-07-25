@@ -166,5 +166,24 @@ class Planner:
         return None
 
 
+
+    # V12.1 — Prioridade 4: `resolve()` foi removido daqui (auditoria
+    # confirmou, por grep, que nada o chamava — código morto real, não
+    # hipotético). NÃO foi só apagado às cegas: comparei contra o
+    # dispatch de verdade em ai/ai_engine.py::process()._run() antes de
+    # decidir, e ele tinha duas lacunas reais que o tornariam uma troca
+    # de comportamento, não uma consolidação neutra:
+    #   1. Não chamava decision_engine.evaluate_confidence() — perderia
+    #      o "ask_user" quando a confiança da decisão é baixa.
+    #   2. Não replicava a filtragem de apps já abertos que
+    #      ai/executor.py::FlowExecutor._dispatch_flow() faz via
+    #      context_cache antes de montar o plano.
+    # Consolidar o dispatch aqui de verdade (objetivo genuíno, alinhado
+    # com a Prioridade 7 de continuar reduzindo o AIEngine) exige trazer
+    # essas duas partes junto e trocar o call site do loop de decisão
+    # mais crítico do sistema — risco real de regressão silenciosa sem
+    # um LLM de verdade pra testar contra. Fica como próximo passo
+    # deliberado, não como esquecimento.
+
 # Instância global
 planner = Planner()

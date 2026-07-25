@@ -23,6 +23,7 @@ DEFAULTS = {
         "temperature": 0.7,
         "max_tokens": 2048,
         "vision_model": "qwen2.5vl:3b",
+        "keep_alive": -1,              # -1 = manter modelo em RAM permanentemente
     },
     "ui": {
         "avatar_position": [50, 50],   # x, y em porcentagem da tela

@@ -19,7 +19,7 @@ class CapturarTelaTool(BaseTool):
     name = "capturar_tela"
     description = "Tira screenshot da tela inteira ou região."
     params_doc = '{"caminho": "C:/Users/User/Desktop/screen.png"}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             caminho = p.get("caminho", str(DESKTOP / f"screenshot_{int(time.time())}.png"))
             img     = pyautogui.screenshot()
@@ -32,7 +32,7 @@ class MoverMouseTool(BaseTool):
     name = "mover_mouse"
     description = "Move cursor para coordenadas x, y."
     params_doc = '{"x": 500, "y": 300}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             pyautogui.moveTo(int(p["x"]), int(p["y"]), duration=0.25)
             return self._success(mensagem=f"Mouse → ({p['x']}, {p['y']})")
@@ -43,7 +43,7 @@ class ClicarMouseTool(BaseTool):
     name = "clicar_mouse"
     description = "Clica em coordenadas x, y. botao: left/right/middle."
     params_doc = '{"x": 500, "y": 300, "botao": "left", "cliques": 1}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             x = int(p["x"]); y = int(p["y"])
             botao   = p.get("botao", "left")
@@ -60,7 +60,7 @@ class DigitarTextoTool(BaseTool):
     name = "digitar_texto"
     description = "Digita texto via teclado. Suporta unicode."
     params_doc = '{"texto": "Olá mundo!", "intervalo": 0.05}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             texto     = str(p["texto"])
             intervalo = float(p.get("intervalo", 0.03))
@@ -80,7 +80,7 @@ class PressionarTeclaTool(BaseTool):
     name = "pressionar_tecla"
     description = "Pressiona tecla(s) ou atalhos. Ex: Ctrl+C, Win+D, F5."
     params_doc = '{"teclas": "ctrl+c"}  — ou lista: ["ctrl","shift","esc"]'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             teclas = p.get("teclas", p.get("key", ""))
             if isinstance(teclas, str):
@@ -100,7 +100,7 @@ class AtalhoTeclaTool(BaseTool):
     name = "atalho_teclado"
     description = "Executa atalho de teclado composto. Ex: Ctrl+Alt+Del, Win+R."
     params_doc = '{"atalho": "ctrl+shift+esc"}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             atalho = str(p["atalho"])
             teclas = [t.strip().lower() for t in atalho.split("+")]
@@ -114,7 +114,7 @@ class RolarPaginaTool(BaseTool):
     name = "rolar_pagina"
     description = "Rola a página ou scroll. sentido: up/down."
     params_doc = '{"sentido": "down", "cliques": 5}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             sentido = str(p.get("sentido", "down")).lower()
             cliques = int(p.get("cliques", 3))
@@ -128,7 +128,7 @@ class EsperarTool(BaseTool):
     name = "esperar"
     description = "Aguarda N segundos antes de continuar o fluxo."
     params_doc = '{"segundos": 2}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             seg = float(p.get("segundos", 1))
             time.sleep(seg)
@@ -140,7 +140,7 @@ class CopiarAreaTransfTool(BaseTool):
     name = "copiar_area_transf"
     description = "Lê o conteúdo atual do clipboard/área de transferência."
     params_doc = '{}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             import pyperclip
             texto = pyperclip.paste()
@@ -156,7 +156,7 @@ class EscreverAreaTransfTool(BaseTool):
     name = "escrever_area_transf"
     description = "Escreve texto no clipboard/área de transferência."
     params_doc = '{"texto": "conteúdo a copiar"}'
-    def execute(self, p):
+    def execute(self, p: dict) -> dict:
         try:
             import pyperclip
             pyperclip.copy(str(p["texto"]))
@@ -165,3 +165,7 @@ class EscreverAreaTransfTool(BaseTool):
             return self._error("pyperclip não instalado — pip install pyperclip")
         except Exception as e:
             return self._error("Erro ao escrever clipboard", e)
+
+
+# Auto-registro V11
+REGISTRY = [CapturarTelaTool(), MoverMouseTool(), ClicarMouseTool(), DigitarTextoTool(), PressionarTeclaTool(), AtalhoTeclaTool(), RolarPaginaTool(), EsperarTool(), CopiarAreaTransfTool(), EscreverAreaTransfTool()]

@@ -76,3 +76,7 @@ class PesquisarSiteTool(BaseTool):
             return self._success(mensagem=f"Pesquisando '{query}' em {site}")
         except Exception as e:
             return self._error("Erro ao pesquisar site", e)
+
+
+# Auto-registro V11
+REGISTRY = [AbrirSiteTool(), PesquisarWebTool(), PesquisarYoutubeTool(), PesquisarSiteTool()]

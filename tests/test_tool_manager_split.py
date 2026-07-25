@@ -33,13 +33,13 @@ ORIGINAL_36_TOOLS = {
 # obter_metricas: nova na Fase 7 (Observabilidade) — não fazia parte do
 # conjunto original de 36, mas segue exatamente o mesmo padrão de
 # obter_cpu/obter_ram.
-CURRENT_37_TOOLS = ORIGINAL_36_TOOLS | {"obter_metricas"}
+CURRENT_38_TOOLS = ORIGINAL_36_TOOLS | {"obter_metricas", "pesquisar_resposta"}
 
 
-def test_exactly_36_tools_registered_same_names():
+def test_all_required_tools_registered():
     import tools.tool_manager as tm
-    assert set(tm.tool_manager._tools.keys()) == CURRENT_37_TOOLS
-    assert len(tm.tool_manager._tools) == 37
+    assert set(tm.tool_manager._tools.keys()) == CURRENT_38_TOOLS
+    assert len(tm.tool_manager._tools) == 38
     # As 36 originais continuam todas lá — Fase 7 só adicionou, não removeu.
     assert ORIGINAL_36_TOOLS <= set(tm.tool_manager._tools.keys())
 

@@ -6,7 +6,8 @@
     "lmstudio_url": "http://localhost:1234",
     "temperature": 0.7,
     "max_tokens": 2048,
-    "vision_model": "qwen2.5vl:3b"
+    "vision_model": "qwen2.5vl:3b",
+    "keep_alive": -1
   },
   "ui": {
     "avatar_position": [
@@ -20,13 +21,13 @@
     "chat_height": 680
   },
   "voice": {
-    "voice_rate": 170,
-    "voice_volume": 0.9,
-    "language": "pt",
     "tts_enabled": true,
     "stt_enabled": false,
     "auto_speak": false,
-    "stt_model": "tiny"
+    "voice_rate": 170,
+    "voice_volume": 0.9,
+    "stt_model": "tiny",
+    "language": "pt"
   },
   "memory": {
     "short_term_limit": 20,

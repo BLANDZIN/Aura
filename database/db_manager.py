@@ -27,14 +27,20 @@ class DatabaseManager:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        # Sem isso, qualquer lock externo no arquivo (outra ferramenta
-        # abrindo o .db pra inspecionar, um backup em andamento) falha
-        # imediatamente com "database is locked" em vez de esperar um
-        # pouco e tentar de novo — a conexão em si já é serializada
-        # por _lock, então isso cobre só contenção EXTERNA ao processo.
+        # WAL mode: leitores não bloqueiam escritores. Essencial para
+        # uso concorrente real (chat + monitor + memórias simultâneas).
+        # Sem WAL, um SELECT pode bloquear um INSERT em outra thread.
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        # 5s de timeout para contenção EXTERNA (outra ferramenta
+        # abrindo o .db pra inspecionar, backup em andamento).
         self._conn.execute("PRAGMA busy_timeout = 5000")
+        # synchronous=NORMAL: segurança + performance. FULL seria
+        # mais seguro mas 2-3x mais lento em writes.
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        # Cache de 32MB para queries frequentes
+        self._conn.execute("PRAGMA cache_size = -32768")
         self._init_tables()
-        logger.info(f"Banco de dados iniciado: {db_path}")
+        logger.info(f"Banco de dados iniciado (WAL): {db_path}")
 
     def _init_tables(self) -> None:
         """Cria todas as tabelas necessárias."""
@@ -153,6 +159,25 @@ class DatabaseManager:
                 criado_em       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 ultima_aplicacao TIMESTAMP
             );
+
+            -- V12.1 Prioridade 9: índices pras consultas reais mais
+            -- frequentes. Colunas UNIQUE (chave/nome) já tinham índice
+            -- implícito pela própria constraint — estes cobrem os
+            -- WHERE/ORDER BY que não tinham nenhum.
+            CREATE INDEX IF NOT EXISTS idx_tasks_status_prioridade
+                ON tasks(status, prioridade);
+            CREATE INDEX IF NOT EXISTS idx_tasks_agendado_em
+                ON tasks(agendado_em) WHERE agendado_em IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_memory_permanent_categoria
+                ON memory_permanent(categoria);
+            CREATE INDEX IF NOT EXISTS idx_memory_permanent_importance
+                ON memory_permanent(importance DESC, access_count DESC);
+            CREATE INDEX IF NOT EXISTS idx_flow_library_prioridade
+                ON flow_library(prioridade DESC);
+            CREATE INDEX IF NOT EXISTS idx_flow_library_taxa_sucesso
+                ON flow_library(taxa_sucesso);
+            CREATE INDEX IF NOT EXISTS idx_execution_log_flow_nome
+                ON execution_log(flow_nome, executado_em DESC);
         """)
         self._conn.commit()
 

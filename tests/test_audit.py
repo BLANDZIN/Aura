@@ -105,6 +105,24 @@ def test_workspace_snapshot_is_excluded_from_audit(tmp_path):
     assert not any("workspace" in f.parts for f in files)
 
 
+def test_build_and_dist_output_are_excluded_from_audit(tmp_path):
+    # Mesmo problema do angela/workspace: build/ e dist/ são saída do
+    # PyInstaller (build.py), não código-fonte de arquitetura. Rodar a
+    # auditoria logo após um build local infla duplicações/imports
+    # artificialmente se essas pastas entrarem na varredura (achado
+    # real, não hipotético — aconteceu rodando contra a V12).
+    p = make_platform(tmp_path)
+    root = Path(p.workspace_root())
+    (root / "mod.py").write_text("x = 1\n" * 20)
+    for gerado in ("build", "dist"):
+        alvo = root / gerado / "_internal" / "mod.py"
+        alvo.parent.mkdir(parents=True)
+        alvo.write_text("x = 1\n" * 20)
+
+    files = Auditor(p)._python_files()
+    assert not any(f.parts[0] in ("build", "dist") for f in files)
+
+
 def test_deferred_import_inside_function_is_not_a_cycle(tmp_path):
     # Import dentro de função é o jeito padrão em Python de EVITAR
     # circularidade real — não pode ser tratado como se fosse um ciclo.

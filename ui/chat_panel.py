@@ -303,6 +303,22 @@ class ChatPanel(QWidget):
         btn_angela.clicked.connect(lambda: bus.publish("ui.open_angela"))
         row.addWidget(btn_angela)
 
+        # Botao Ferramentas — abre o Launcher V11 completo
+        btn_tools = QPushButton("🔧 Ferramentas")
+        btn_tools.setToolTip("Abrir painel completo do Launcher V11")
+        btn_tools.setFixedHeight(32)
+        btn_tools.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_tools.setStyleSheet("""
+            QPushButton {
+                background: #1A2744; color: #7DD3FC;
+                border: 1px solid #388BFD; border-radius: 8px;
+                padding: 4px 10px; font-size: 12px;
+            }
+            QPushButton:hover { background: #1E3A5F; color: #BAE6FD; }
+        """)
+        btn_tools.clicked.connect(lambda: bus.publish("ui.open_launcher"))
+        row.addWidget(btn_tools)
+
         # Botão fechar
         btn_close = QPushButton("✕")
         btn_close.setFixedSize(32, 32)
@@ -401,8 +417,25 @@ class ChatPanel(QWidget):
         self._btn_mic.setFixedSize(36, 36)
         self._btn_mic.setCheckable(True)
         self._btn_mic.setStyleSheet(STYLE_BTN_MIC)
-        self._btn_mic.setToolTip("Microfone (em breve)")
+        self._btn_mic.setToolTip("Microfone")
         self._btn_mic.clicked.connect(self._toggle_mic)
+
+        # Botao Voz — ativa/desativa fala automatica das respostas
+        self._btn_voice = QPushButton("🔊")
+        self._btn_voice.setFixedSize(36, 36)
+        self._btn_voice.setCheckable(True)
+        self._btn_voice.setToolTip("Voz: falar respostas")
+        self._btn_voice.setStyleSheet("""
+            QPushButton {
+                background: #1E3A5F; color: #7DD3FC;
+                border: 1px solid #388BFD; border-radius: 8px;
+                font-size: 16px;
+            }
+            QPushButton:hover  { background: #2A4E7F; }
+            QPushButton:checked { background: #0D2B1F; color: #3FB950; border-color: #3FB950; }
+        """)
+        self._btn_voice.clicked.connect(self._toggle_voice)
+        self._voice_enabled = False
 
         self._btn_cafune = QPushButton("🐾")
         self._btn_cafune.setFixedSize(36, 36)
@@ -420,6 +453,7 @@ class ChatPanel(QWidget):
 
         btn_col.addWidget(self._btn_send)
         btn_col.addWidget(self._btn_mic)
+        btn_col.addWidget(self._btn_voice)
         btn_col.addWidget(self._btn_cafune)
         row.addLayout(btn_col)
 
@@ -480,6 +514,23 @@ class ChatPanel(QWidget):
             QTimer.singleShot(3000, lambda: bus.publish("avatar.set_state", state="idle"))
         except Exception as e:
             self._add_system_message("🐾 *aceita o carinho*")
+
+    def _toggle_voice(self) -> None:
+        """Ativa/desativa fala automatica das respostas."""
+        self._voice_enabled = self._btn_voice.isChecked()
+        try:
+            from voice.voice_engine import voice_manager
+            if self._voice_enabled:
+                voice_manager.start()
+                self._btn_voice.setText("🔊")
+                self._add_system_message("🔊 Voz ativada — vou falar as respostas")
+            else:
+                voice_manager.stop()
+                self._btn_voice.setText("🔇")
+                self._add_system_message("🔇 Voz silenciada")
+        except Exception as e:
+            self._add_system_message(f"🔇 Voz indisponivel: {e}")
+            self._btn_voice.setChecked(False)
 
     def _toggle_mic(self) -> None:
         """Liga/desliga gravação de voz."""
@@ -559,6 +610,13 @@ class ChatPanel(QWidget):
     def _on_response(self, text: str) -> None:
         self._hide_typing()
         self._add_bubble(text, "assistant")
+        # Fala a resposta se voz estiver ativada
+        if self._voice_enabled and len(text) > 5 and not text.startswith(("✅","❌","⚙️","⛔","💡","⚠️")):
+            try:
+                from voice.voice_engine import voice_manager
+                voice_manager.speak(text)
+            except Exception:
+                pass
 
     def _on_stream_token(self, token: str) -> None:
         self._hide_typing()

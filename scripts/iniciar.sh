@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# AURA v3 — iniciar.sh (equivalente Linux de iniciar.bat)
+# AURA V12 — scripts/iniciar.sh
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo ""
 echo "  ╔══════════════════════════════════════╗"
-echo "  ║         AURA v3 - Iniciando           ║"
+echo "  ║         AURA V12 - Iniciando          ║"
 echo "  ╚══════════════════════════════════════╝"
 echo ""
 
@@ -20,8 +20,14 @@ if ! python3 -c "import PyQt6" >/dev/null 2>&1; then
     bash "$(dirname "$0")/instalar.sh"
 fi
 
-echo "  Iniciando AURA v3..."
-python3 main.py
+if ! curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+    echo "  [INFO] Iniciando Ollama..."
+    ollama serve >/dev/null 2>&1 &
+    sleep 3
+fi
+
+echo "  Iniciando AURA V12..."
+python3 AURA.py
 status=$?
 
 if [ $status -ne 0 ]; then
@@ -29,7 +35,7 @@ if [ $status -ne 0 ]; then
     echo "  [ERRO] AURA encerrou com erro (código $status). Veja os logs acima."
     if [ $status -eq 134 ]; then
         echo "  [DICA] Código 134 + menção a 'xcb platform plugin' nos logs acima ="
-        echo "         faltam libs do sistema pro Qt6. Rode ./instalar.sh de novo"
+        echo "         faltam libs do sistema pro Qt6. Rode scripts/instalar.sh de novo"
         echo "         (ele instala libxcb-cursor0 e as outras libs xcb necessárias)."
     fi
 fi
