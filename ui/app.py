@@ -21,6 +21,7 @@ from core.event_bus import bus
 from config.settings import settings
 from config.personality import personality
 from core.logger import setup_logger
+from avatar import AvatarEngine
 
 logger = setup_logger("app")
 
@@ -38,6 +39,7 @@ class AuraApp:
 
     def __init__(self):
         self._avatar: AvatarWidget | None = None
+        self._avatar_engine: AvatarEngine | None = None
         self._chat:   ChatPanel    | None = None
         self._angela = None            # angela.Angela — Chief Engineer
         self._angela_panel = None      # ui.angela_panel.AngelaPanel (lazy)
@@ -56,18 +58,9 @@ class AuraApp:
         # ── 2. Conecta avatar ↔ chat ──────────────────────────────────────────
         self._avatar.clicked.connect(self._on_avatar_clicked)
 
-        # ── 3. Conecta EventBus → Avatar ──────────────────────────────────────
-        bus.subscribe("ai.thinking",     self._on_ai_thinking)
-        bus.subscribe("ai.response",     self._on_ai_response)
-        bus.subscribe("ai.stream.token", self._on_ai_stream)
-        bus.subscribe("ai.stream.done",  self._on_ai_stream_done)
-        bus.subscribe("ai.error",        self._on_ai_error)
-        bus.subscribe("tool.result",     self._on_tool_result)
-        # EmotionEngine publica este evento após cada execução (baseado no
-        # estado emocional calculado: orgulhosa, frustrada, animada, etc.)
-        # mas antes desta linha ninguém escutava — o avatar nunca refletia
-        # a emoção, só os estados de fluxo (thinking/speaking/error/working).
-        bus.subscribe("avatar.set_state", self._on_avatar_set_state)
+        # ── 3. AvatarEngine recebe eventos e controla o runtime VRM
+        self._avatar_engine = AvatarEngine(view=self._avatar)
+        self._avatar_engine.start()
 
         # ── 4. Inicializa módulos pesados em background ───────────────────────
         QTimer.singleShot(100, self._init_modules)

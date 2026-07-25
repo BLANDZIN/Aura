@@ -36,6 +36,9 @@ logger = setup_logger("avatar")
 STATE_COLORS = {
     "idle":     {"core": "#4FC3F7", "glow": "#0288D1", "ring": "#29B6F6", "bg": "#0D1B2A"},
     "thinking": {"core": "#CE93D8", "glow": "#7B1FA2", "ring": "#AB47BC", "bg": "#1A0D2A"},
+    "talking":   {"core": "#80DEEA", "glow": "#00838F", "ring": "#26C6DA", "bg": "#0D2224"},
+    "listening": {"core": "#A5D6A7", "glow": "#2E7D32", "ring": "#66BB6A", "bg": "#0D2415"},
+    "executing": {"core": "#FFD54F", "glow": "#F57F17", "ring": "#FFCA28", "bg": "#2A1E0D"},
     "speaking": {"core": "#80DEEA", "glow": "#00838F", "ring": "#26C6DA", "bg": "#0D2224"},
     "working":  {"core": "#FFD54F", "glow": "#F57F17", "ring": "#FFCA28", "bg": "#2A1E0D"},
     "error":    {"core": "#EF9A9A", "glow": "#B71C1C", "ring": "#EF5350", "bg": "#2A0D0D"},
@@ -217,9 +220,9 @@ class AvatarWidget(QWidget):
             self._draw_idle(painter, cx, cy, r, core_color, glow_color, ring_color)
         elif self._state == "thinking":
             self._draw_thinking(painter, cx, cy, r, core_color, glow_color, ring_color)
-        elif self._state == "speaking":
+        elif self._state in ("speaking", "talking", "listening"):
             self._draw_speaking(painter, cx, cy, r, core_color, glow_color, ring_color)
-        elif self._state == "working":
+        elif self._state in ("working", "executing"):
             self._draw_working(painter, cx, cy, r, core_color, glow_color, ring_color)
         elif self._state == "error":
             self._draw_error(painter, cx, cy, r, core_color, glow_color, ring_color)
