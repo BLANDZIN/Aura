@@ -19,16 +19,18 @@ Módulos individuais (cada um tem sua própria versão):
   core, ui, angela, launcher, models, extensions, assets
 """
 
-__version__ = "11.0.0"
+from core.version import AURA_VERSION
+
+__version__ = AURA_VERSION
 
 # Manifesto de módulos — versão atual de cada um
 # Isto é o que enviamos para o GitHub comparar
 MODULES = {
-    "core":       {"version": "11.0.0", "name": "Core AURA",       "path": "ai/ automation/ core/ memory/ tools/ tasks/ voice/ vision/ config/ database/"},
-    "ui":         {"version": "11.0.0", "name": "Interface (UI)",   "path": "ui/"},
+    "core":       {"version": AURA_VERSION, "name": "Core AURA",       "path": "ai/ automation/ core/ memory/ tools/ tasks/ voice/ vision/ config/ database/"},
+    "ui":         {"version": AURA_VERSION, "name": "Interface (UI)",   "path": "ui/"},
     "angela":     {"version": "1.0.0",  "name": "Angela",          "path": "angela/"},
-    "launcher":   {"version": "11.0.0", "name": "Launcher",        "path": "launcher/"},
-    "models":     {"version": "11.0.0", "name": "Modelos",         "path": "models/"},
+    "launcher":   {"version": AURA_VERSION, "name": "Launcher",        "path": "launcher/"},
+    "models":     {"version": AURA_VERSION, "name": "Modelos",         "path": "models/"},
     "extensions": {"version": "1.0.0",  "name": "Plugins",         "path": "extensions/"},
     "assets":     {"version": "1.0.0",  "name": "Assets",          "path": "assets/"},
 }

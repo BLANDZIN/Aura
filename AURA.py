@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
 from core.logger import setup_logger
+from core.version import AURA_VERSION
 
 logger = setup_logger("aura")
 
@@ -68,7 +69,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("AURA")
-    app.setApplicationVersion("11.0.0")
+    app.setApplicationVersion(AURA_VERSION)
     app.setStyle("Fusion")
 
     # EXPERIENCIA PRINCIPAL: Avatar flutuante + Chat (LEVE, RAPIDO)

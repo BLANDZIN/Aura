@@ -54,3 +54,29 @@ def test_flow_abort_publishes_aura_problem(fake_tool_manager):
     assert len(received) == 1
     assert received[0]["kind"] == "flow_failure"
     assert "fluxo de teste" in received[0]["detail"]
+
+
+def test_flow_requires_confirmation_before_sensitive_step(fake_tool_manager):
+    from automation.flow_executor import FlowExecutor
+    from automation.planner import Plan, Step
+    from core.event_bus import bus
+
+    confirmations = []
+    problems = []
+    bus.subscribe("tool.confirm_required", lambda **kw: confirmations.append(kw))
+    bus.subscribe("aura.problem", lambda **kw: problems.append(kw))
+    bus.subscribe("flow.aborted", lambda **kw: None)
+    try:
+        plan = Plan(
+            descricao="fluxo perigoso",
+            steps=[Step(acao="excluir_arquivo", parametros={"caminho": "x.txt"})],
+        )
+        FlowExecutor().execute(plan, async_mode=False)
+    finally:
+        bus.clear("tool.confirm_required")
+        bus.clear("aura.problem")
+        bus.clear("flow.aborted")
+
+    assert len(confirmations) == 1
+    assert confirmations[0]["intent"]["acao"] == "excluir_arquivo"
+    assert problems[0]["kind"] == "flow_confirmation_required"

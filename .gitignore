@@ -3,14 +3,19 @@ __pycache__/
 *.pyo
 logs/
 database/*.db
+database/*.db-shm
+database/*.db-wal
 angela/workspace/
 .pytest_cache/
 *.egg-info/
+.ruff_cache/
+.mypy_cache/
 
 # V11 — diretórios de dados (não commitar conteúdo, só estrutura)
 cache/
 workspace/
 profiles/.active
+profiles/*
 
 # Modelos (GGUF são grandes demais pra git)
 models/*.gguf
@@ -22,6 +27,5 @@ voices/*.mp3
 
 # Build artifacts
 dist/
+build/
 *.spec
-build/aura_linux/
-build/build/

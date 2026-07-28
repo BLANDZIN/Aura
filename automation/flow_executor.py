@@ -23,6 +23,11 @@ from database.db_manager import db
 logger = setup_logger("flow_executor")
 
 
+REQUIRES_CONFIRM_FALLBACK = {
+    "excluir_arquivo", "fechar_programa", "digitar_texto", "clicar_mouse",
+}
+
+
 @dataclass
 class StepResult:
     acao:     str
@@ -103,6 +108,40 @@ class FlowExecutor:
                 bus.publish("flow.aborted", etapa=idx+1, total=n_total)
                 break
 
+            if self._step_requires_confirmation(step):
+                logger.warning(
+                    "Fluxo aguardando confirmacao antes de executar acao sensivel: %s",
+                    step.acao,
+                )
+                intent = {
+                    "acao": step.acao,
+                    "parametros": step.parametros,
+                    "mensagem": step.descricao or step.acao,
+                    "confirmacao_necessaria": True,
+                    "_flow_descricao": plan.descricao,
+                }
+                bus.publish("tool.confirm_required", intent=intent)
+                bus.publish(
+                    "flow.aborted",
+                    etapa=idx+1,
+                    total=n_total,
+                    mensagem=f"Confirmacao necessaria para '{step.acao}'",
+                )
+                bus.publish(
+                    "aura.problem",
+                    kind="flow_confirmation_required",
+                    detail=(
+                        f"Fluxo '{plan.descricao}' pausado antes de "
+                        f"'{step.acao}' porque a acao exige confirmacao."
+                    ),
+                )
+                resultados.append(StepResult(
+                    acao=step.acao,
+                    sucesso=False,
+                    mensagem="Confirmacao necessaria antes da execucao",
+                ))
+                break
+
             bus.publish("flow.step",
                         n=idx+1, total=n_total,
                         acao=step.acao,
@@ -172,6 +211,16 @@ class FlowExecutor:
             logger.info(f"Fluxo concluído: {n_ok}/{n_total} etapas OK em {duracao:.1f}s")
         else:
             logger.warning(f"Fluxo finalizado com falhas: {n_fail} erro(s)")
+
+    def _step_requires_confirmation(self, step: Step) -> bool:
+        if step.confirmacao_necessaria:
+            return True
+        try:
+            from tools.tool_manager import tool_manager
+            required = getattr(tool_manager, "REQUIRES_CONFIRM", REQUIRES_CONFIRM_FALLBACK)
+        except Exception:
+            required = REQUIRES_CONFIRM_FALLBACK
+        return step.acao in required
 
     def _execute_step(self, step: Step, tool_manager, normalize_params) -> StepResult:
         """Executa uma etapa com retry e timeout."""

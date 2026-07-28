@@ -17,12 +17,13 @@ from dataclasses import dataclass, field
 import requests
 
 from core.logger import setup_logger
+from core.version import AURA_MAJOR
 
 logger = setup_logger("updater.checker")
 
 GITHUB_REPO = "BLANDZIN/Aura"
 GITHUB_API  = f"https://api.github.com/repos/{GITHUB_REPO}/releases"
-USER_AGENT  = "AURA-V11-Updater/1.0"
+USER_AGENT  = f"AURA-V{AURA_MAJOR}-Updater/1.0"
 
 
 @dataclass

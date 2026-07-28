@@ -67,7 +67,8 @@ class TestBackup:
 class TestModule:
     def test_manifest(self):
         from updater import MODULES, __version__
-        assert __version__ == "11.0.0"
+        from core.version import AURA_VERSION
+        assert __version__ == AURA_VERSION
         assert "core" in MODULES
         assert all("version" in m for m in MODULES.values())
 

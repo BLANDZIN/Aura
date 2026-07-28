@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""AURA V11 Build — Windows + Linux. Self-contained, no external files needed."""
+"""AURA Build - Windows + Linux. Self-contained, no external files needed."""
 import os, sys, shutil, subprocess, platform as _plat
+from core.version import AURA_VERSION, AURA_MAJOR
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
@@ -33,7 +34,7 @@ def generate_spec_content() -> str:
             version_line = f"    version=r'{version_path}',"
 
     return f'''# -*- mode: python ; coding: utf-8 -*-
-# Auto-generated spec for AURA V11
+# Auto-generated spec for AURA V{AURA_MAJOR}
 from pathlib import Path
 ROOT = Path(r"{ROOT}")
 ENTRY = ROOT / "AURA.py"
@@ -86,7 +87,7 @@ def build():
     en = "AURA.exe" if is_win else "AURA"
     
     print("=" * 50)
-    print(f"  AURA V11 — Build {'Windows' if is_win else 'Linux'}")
+    print(f"  AURA V{AURA_MAJOR} - Build {'Windows' if is_win else 'Linux'}")
     print("=" * 50)
     
     clean()
@@ -110,7 +111,7 @@ def build():
     
     # README
     with open(os.path.join(dist_dir, "LEIAME.txt"), "w", encoding="utf-8") as f:
-        f.write(f"AURA V11\nExecute: {en}\nRequer Ollama: https://ollama.com\n")
+        f.write(f"AURA {AURA_VERSION}\nExecute: {en}\nRequer Ollama: https://ollama.com\n")
     
     # Linux start script
     if not is_win:

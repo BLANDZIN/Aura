@@ -44,7 +44,7 @@ class TestBuildConfig:
     def test_linux_spec_valid(self):
         """build.py deve existir e gerar spec valido."""
         assert (ROOT / "build.py").is_file(), "build.py nao encontrado"
-        compile((ROOT / "build.py").read_text(), "build.py", "exec")
+        compile((ROOT / "build.py").read_text(encoding="utf-8"), "build.py", "exec")
 
     def test_version_info_is_optional_not_required(self):
         """build/version_info.txt é OPCIONAL (recurso de versão do .exe no
@@ -89,7 +89,7 @@ class TestBuildConfig:
 
     def test_requirements_covers_core_deps(self):
         """requirements.txt deve listar dependências essenciais."""
-        req = (ROOT / "requirements.txt").read_text()
+        req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
         essential = ["PyQt6", "requests", "psutil", "pyautogui", "pyttsx3"]
         for dep in essential:
             assert dep in req, f"{dep} não encontrado em requirements.txt"
@@ -139,12 +139,12 @@ class TestBuildConfig:
             try:
                 mod_path = ROOT / (mod_name.replace(".", "/") + ".py")
                 if mod_path.is_file():
-                    code = mod_path.read_text()
+                    code = mod_path.read_text(encoding="utf-8")
                     compile(code, str(mod_path), "exec")
                 else:
                     init_path = ROOT / (mod_name.replace(".", "/") + "/__init__.py")
                     if init_path.is_file():
-                        compile(init_path.read_text(), str(init_path), "exec")
+                        compile(init_path.read_text(encoding="utf-8"), str(init_path), "exec")
                     else:
                         failed.append(f"{mod_name} (arquivo não encontrado)")
             except SyntaxError as e:
@@ -167,7 +167,7 @@ class TestBuildConfig:
         for fname in ["scripts/iniciar.bat", "scripts/iniciar.sh"]:
             path = ROOT / fname
             if path.is_file():
-                content = path.read_text()
+                content = path.read_text(encoding="utf-8")
                 assert "AURA.py" in content or "AURA" in content, \
                     f"{fname} não referencia AURA.py"
 

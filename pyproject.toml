@@ -1,0 +1,47 @@
+[project]
+name = "aura-desktop"
+version = "12.1.0"
+description = "Artificial Unified Responsive Assistant"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PyQt6>=6.6.0",
+    "requests>=2.31.0",
+    "pyautogui>=0.9.54",
+    "Pillow>=10.0.0",
+    "pyperclip>=1.8.2",
+    "psutil>=5.9.0",
+    "edge-tts>=6.1.0",
+    "pyttsx3>=2.90",
+    "SpeechRecognition>=3.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.5.0",
+]
+ocr = [
+    "easyocr>=1.7.0",
+    "pytesseract>=0.3.10",
+]
+stt = [
+    "faster-whisper>=1.0.0",
+]
+build = [
+    "pyinstaller>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    "build",
+    "dist",
+    "angela/workspace",
+]
+

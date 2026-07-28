@@ -35,7 +35,12 @@ Ponto de entrada público:
     angela.request("Analise X")       # dispara investigação assíncrona
 """
 
-from angela.chief_engineer import Angela
-
 __all__ = ["Angela"]
 __version__ = "1.0.0"
+
+
+def __getattr__(name: str):
+    if name == "Angela":
+        from angela.chief_engineer import Angela
+        return Angela
+    raise AttributeError(f"module 'angela' has no attribute {name!r}")
