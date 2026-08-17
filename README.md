@@ -7,6 +7,7 @@
 ## Artificial Unified Responsive Assistant
 
 ### Your Personal AI Companion
+#https://github.com/BLANDZIN/AURA_site
 
 *"Uma inteligencia projetada para assistir, lembrar e evoluir com voce."*
 
