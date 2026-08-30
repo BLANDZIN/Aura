@@ -20,6 +20,7 @@ def build_system_message(
     tool_manager,
     context_manager=None,
     emotional_context=None,
+    specialist_context=None,
 ) -> Dict:
     """
     Monta a mensagem de sistema completa para enviar ao modelo.
@@ -74,6 +75,12 @@ def build_system_message(
         system_prompt += "\n\n" + _EMOTIONAL_CONTEXT_BLOCKS.get(
             emotional_context, _EMOTIONAL_CONTEXT_BLOCKS["default"]
         )
+
+    # V12.2: especialistas deterministas e pequenos analisam o turno antes
+    # do modelo. O bloco e compacto e opcional; se algum especialista falhar,
+    # o prompt continua igual ao da V12.1.
+    if specialist_context:
+        system_prompt += "\n\n" + specialist_context
 
     return {"role": "system", "content": system_prompt}
 

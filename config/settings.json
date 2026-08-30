@@ -11,8 +11,8 @@
   },
   "ui": {
     "avatar_position": [
-      92.0,
-      -0.5
+      90.2,
+      -2.5
     ],
     "avatar_size": 120,
     "always_on_top": true,
@@ -39,7 +39,7 @@
     "require_confirm_close_process": true
   },
   "vision": {
-    "enabled": false,
+    "enabled": true,
     "capture_interval": 5
   },
   "angela": {

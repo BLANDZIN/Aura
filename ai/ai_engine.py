@@ -445,7 +445,11 @@ class AIEngine:
 
     def reload_provider(self): self.provider = get_provider()
 
-    def _build_system_message(self, emotional_context: Optional[str] = None) -> Dict:
+    def _build_system_message(
+        self,
+        emotional_context: Optional[str] = None,
+        specialist_context: Optional[str] = None,
+    ) -> Dict:
         """Delega para prompt_builder (V11)."""
         from tools.tool_manager import tool_manager
         from ai.prompt_builder import build_system_message
@@ -455,6 +459,7 @@ class AIEngine:
             tool_manager=tool_manager,
             context_manager=self._ctx,
             emotional_context=emotional_context,
+            specialist_context=specialist_context,
         )
     def _parse_intent(self, response: str) -> Dict[str, Any]:
         objects = _parse_multi_json(response)
@@ -649,6 +654,18 @@ class AIEngine:
 
                 # ── Nível 2: Decision Engine ──────────────────────────────────
                 ctx = self._ctx.get() if self._ctx else {}
+                specialist_report = None
+                try:
+                    from ai.agents import specialist_coordinator
+                    specialist_report = specialist_coordinator.analyze(
+                        user_input,
+                        context=ctx,
+                        emotion=self._emotion,
+                        learning=self._learning,
+                    )
+                except Exception as e:
+                    logger.debug(f"Especialistas V12.2 indisponiveis: {e}")
+
                 from automation.decision_engine import (
                     decision_engine, reflection_engine, initiative_engine,
                     context_cache
@@ -739,7 +756,14 @@ class AIEngine:
                 emotional_category = _detect_emotional_category(_normalize(user_input))
                 if emotional_category:
                     logger.info(f"Contexto emocional detectado: {emotional_category}")
-                messages = [self._build_system_message(emotional_context=emotional_category)]
+                specialist_context = (
+                    specialist_report.prompt_block()
+                    if specialist_report else None
+                )
+                messages = [self._build_system_message(
+                    emotional_context=emotional_category,
+                    specialist_context=specialist_context,
+                )]
                 messages.extend(memory.short_term.get_messages())
                 logger.info(f"→ IA (necessário): '{user_input[:80]}'")
 
